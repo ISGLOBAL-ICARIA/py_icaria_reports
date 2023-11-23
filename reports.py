@@ -270,3 +270,102 @@ def file_to_drive(worksheet,df,drive_file_name,folder_id,index_included=True):
     gc = gspread.oauth(tokens.path_credentials)
     sh = gc.open(title=drive_file_name,folder_id=folder_id)
     set_with_dataframe(sh.worksheet(worksheet), df,include_index=index_included)
+
+
+def cohorts():
+    all_records = pd.DataFrame()
+    for project_name in tokens.REDCAP_PROJECTS_ICARIA:
+        print(project_name)
+        project = redcap.Project(tokens.URL, tokens.REDCAP_PROJECTS_ICARIA[project_name])
+        df = project.export_records(format='df', fields=params.ALERT_LOGIC_FIELDS_COHORTS,event_name=['cohort_after_mrv_2_arm_1'])
+        df = df.reset_index()
+        df = df[df['redcap_event_name']=='cohort_after_mrv_2_arm_1']
+        if all_records.empty:
+            all_records = df
+        else:
+            all_records = pd.concat([all_records,df])
+
+        print(df.T)
+
+    cohort_records = all_records['record_id'].unique()
+    print(cohort_records)
+
+
+def SPR_baseline_merge_with_lab_results(lab_results,save_):
+    project = redcap.Project(tokens.URL, tokens.SPR_BASELINE)
+    df = project.export_records(format='df', fields=params.SPR_BASELINE_FIELDS)
+    print(df['study_number'].str.replace('SPR-BL-',''))
+    print(df.reset_index()['study_number'])
+    df['SAMPLE_ID'] = df['study_number'].str.replace('SPR-BL-','')
+    df['SAMPLE_ID'] = df['SAMPLE_ID'].astype('float')
+    print(df.reset_index()['SAMPLE_ID'])
+    lab = pd.read_excel(lab_results,sheet_name='Codons_divide')
+    print(lab)
+
+
+    all_together = pd.merge(df,lab,on='SAMPLE_ID')
+    print(all_together)
+
+    all_together.to_excel(save_,index=False)
+
+class CLEANING:
+    def intervention_antigens(self):
+        final_df = pd.DataFrame(columns=['HF','record_id','study_number','vacc_field','number_of_dates','epipenta1_v0_recru_arm_1',
+                                         'epipenta2_v1_iptis_arm_1','epipenta3_v2_iptis_arm_1','epivita_v3_iptisp3_arm_1',
+                                         'epimvr1_v4_iptisp4_arm_1','epivita_v5_iptisp5_arm_1','epimvr2_v6_iptisp6_arm_1'])
+        c = 0
+        final_df_coh = pd.DataFrame(columns=['HF','record_id','study_number','vacc_field','number_of_dates','epipenta1_v0_recru_arm_1',
+                                         'epipenta2_v1_iptis_arm_1','epipenta3_v2_iptis_arm_1','epivita_v3_iptisp3_arm_1',
+                                         'epimvr1_v4_iptisp4_arm_1','epivita_v5_iptisp5_arm_1','epimvr2_v6_iptisp6_arm_1'])
+        c_coh = 0
+        for project_name in tokens.REDCAP_PROJECTS_ICARIA:
+            print(project_name)
+            project = redcap.Project(tokens.URL, tokens.REDCAP_PROJECTS_ICARIA[project_name])
+
+            study_numbers = project.export_records(format='df', fields=['study_number']).reset_index().set_index('record_id')
+            study_numbers = study_numbers[study_numbers['redcap_event_name']=='epipenta1_v0_recru_arm_1'][['study_number']]
+
+            df = project.export_records(format='df', fields=params.LOGIC_FIELDS_INT_ANTIGENS)
+            dfcoh = df.reset_index()
+            cohorts_list = dfcoh[dfcoh['redcap_event_name']=='cohort_after_mrv_2_arm_1']['record_id'].unique()
+            for n,data in df[(df.index.get_level_values('record_id').isin(cohorts_list))&(df['int_date'].notnull())].groupby(level=0):
+                for k,el in data.items():
+                    if ("date" in str(k) and str(k) != 'int_vacc_vit_a_date' and str(k) != 'int_date' and el.count()>1) or (str(k)== 'int_vacc_vit_a_date' and el.count()>2) :
+                        final_df_coh.loc[c_coh] = ''
+                        final_df_coh.loc[c_coh]['study_number'] = study_numbers.loc[n].values[0]
+                        final_df_coh.loc[c_coh]['HF'] = project_name
+                        final_df_coh.loc[c_coh]['record_id'] = n
+                        final_df_coh.loc[c_coh]['vacc_field'] = k
+                        final_df_coh.loc[c_coh]['number_of_dates'] = str(el.count())
+                        for event in el.index.get_level_values(1):
+                            final_df_coh.loc[c_coh][event] = el.reset_index().set_index('redcap_event_name').T[event].values[-1]
+                        c_coh+=1
+#                    elif str(k)== 'int_vacc_vit_a_date' and el.count()>2:
+#                        print(project_name,n,k,el.count(),el.values)
+
+            final_df_coh= final_df_coh.replace(np.nan, '0')
+            for n, data in df[(~df.index.get_level_values('record_id').isin(cohorts_list)) & (df['int_date'].notnull())].groupby(level=0):
+                for k, el in data.items():
+                    if "date" in str(k) and str(k) != 'int_vacc_vit_a_date' and str(k) != 'int_date' and el.count() > 1 or (str(k)== 'int_vacc_vit_a_date' and el.count()>2):
+                        final_df.loc[c] = ''
+                        final_df.loc[c]['study_number'] = study_numbers.loc[n].values[0]
+                        final_df.loc[c]['HF'] = project_name
+                        final_df.loc[c]['record_id'] = n
+                        final_df.loc[c]['vacc_field'] = k
+                        final_df.loc[c]['number_of_dates'] = str(el.count())
+                        for event in el.index.get_level_values(1):
+                            final_df.loc[c][event] = el.reset_index().set_index('redcap_event_name').T[event].values[-1]
+                        c += 1
+               #     elif str(k) == 'int_vacc_vit_a_date' and el.count() > 2:
+            final_df = final_df.replace(np.nan, '0')
+        file_to_drive(params.vacc_coh_worksheet,final_df_coh,tokens.filename_vacc,tokens.folder_id_vacc,index_included=False)
+        file_to_drive(params.vacc_worksheet,final_df,tokens.filename_vacc,tokens.folder_id_vacc,index_included=False)
+
+"""
+MIRAR SI ALGUN CHILD NO HA REBUT ALGUN ANTIGEN
+- BY AGE 16MoA
+- Or at 18M visit
+
+Antigens NO but date.
+Antigens YES but no date.
+"""

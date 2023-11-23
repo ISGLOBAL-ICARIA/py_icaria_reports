@@ -22,4 +22,14 @@ if __name__ == '__main__':
     #reports.participants_intervention_between_dates()
 
     """ PHYSICIANS CONSULTANT REPORT UPDATES"""
-    reports.physician_reports()
+#    reports.physician_reports()
+
+
+    """ REPORT ALL DATA COHORTS """
+#    reports.cohorts()
+
+    """HAILY'S SPRB DATA"""
+#    reports.SPR_baseline_merge_with_lab_results("/home/abofill/Baixades/SPR_BL_Parasitemia (1).xlsx","/home/abofill/Baixades/SPR_BL_REDCap_lab.xlsx")
+
+    """ CLEANING: ANTIGEN DATES ANALYSIS"""
+    reports.CLEANING().intervention_antigens()

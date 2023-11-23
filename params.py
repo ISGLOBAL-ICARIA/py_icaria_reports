@@ -76,6 +76,50 @@ ALERT_LOGIC_FIELDS_SAE_physicians = [
     'sae_other_action', 'sae_con_drug_1', 'sae_con_subs_1', 'sae_interviewer_id', 'sae_complete', 'sae_date'
 ]
 
+ALERT_LOGIC_FIELDS_COHORTS = [
+    'record_id','ch_his_fever','ch_his_sick','ch_his_net','ch_his_date','ch_rdt_malaria','ch_rdt_malaria_result',
+    'ch_rdt_antimalarial_1','ch_rdt_no_antimalarial_desc','ch_rdt_antimalarial_name_1','ch_rdt_antimalarial_ind_1',
+    'ch_rdt_antimalarial_dose_1','ch_rdt_antimalarial_unit_1','ch_rdt_antimalarial_freq_1','ch_rdt_antimalarial_route_1',
+    'ch_rdt_antimalarial_start_1','ch_rdt_antimalarial_ongoing_1','ch_rdt_antimalarial_stop_1','ch_rdt_antimalarial_2',
+    'ch_rdt_antimalarial_name_2','ch_rdt_antimalarial_ind_2',
+    'ch_rdt_antimalarial_dose_2','ch_rdt_antimalarial_unit_2','rdt_antimalarial_freq_2','rdt_antimalarial_route_2',
+    'ch_rdt_antimalarial_start_2','ch_rdt_antimalarial_ongoing_2','ch_rdt_antimalarial_stop_2',
+    'hemocue','hemocue_result','hemocue_result_lower','hemocue_result_haematinics_1','hemocue_haematinics_name_1',
+    'hemocue_haematinics_ind_1','hemocue_haematinics_dose_1','hemocue_haematinics_unit_1','hemocue_haematinics_freq_1',
+    'hemocue_haematinics_route_1','hemocue_haematinics_start_1','hemocue_haematinics_ongoing_1','hemocue_haematinics_stop_1',
+    'hemocue_haematinics_2','hemocue_haematinics_name_2','hemocue_haematinics_dose_2','hemocue_haematinics_ind_2',
+    'hemocue_haematinics_unit_2','hemocue_haematinics_freq_2','hemocue_haematinics_route_2','hemocue_haematinics_start_2',
+    'hemocue_haematinics_ongoing_2','hemocue_haematinics_stop_2','blood_spots','blood_spots_sample_1',
+    'blood_spots_sample_1_id','blood_spots_sample_2','blood_spots_sample_2_id','blood_smear','blood_smear_malaria',
+    'blood_smear_malaria_treatment','bs_antimalarial_name_1','bs_antimalarial_ind_1','bs_antimalarial_dose_1',
+    'bs_antimalarial_unit_1','bs_antimalarial_freq_1','bs_antimalarial_route_1','bs_antimalarial_start_1','bs_antimalarial_ongoing_1',
+    'bs_antimalarial_stop_1','bs_antimalarial_2','bs_antimalarial_name_2','bs_antimalarial_ind_2','bs_antimalarial_dose_2',
+    'bs_antimalarial_unit_2','bs_antimalarial_freq_2','bs_antimalarial_route_2','bs_antimalarial_start_2','bs_antimalarial_ongoing_2',
+    'bs_antimalarial_stop_2','blood_smear_other','blood_smear_other_diagnoses','ch_rdt_date'
+]
+
+LOGIC_FIELDS_INT_ANTIGENS = [
+    'int_vacc_bcg', 'int_vacc_bcg_date', 'int_vacc_opv1', 'int_vacc_opv1_date','int_vacc_opv2', 'int_vacc_opv2_date',
+    'int_vacc_opv3', 'int_vacc_opv3_date', 'int_vacc_ipv', 'int_vacc_ipv_date','int_vacc_ipv2', 'int_vacc_ipv2_date',
+    'int_vacc_penta1', 'int_vacc_penta1_date', 'int_vacc_penta2','int_vacc_penta2_date', 'int_vacc_penta3',
+    'int_vacc_penta3_date', 'int_vacc_pneumo1', 'int_vacc_pneumo1_date','int_vacc_pneumo2', 'int_vacc_pneumo2_date',
+    'int_vacc_pneumo3', 'int_vacc_pneumo3_date', 'int_vacc_rota1','int_vacc_rota1_date', 'int_vacc_rota2',
+    'int_vacc_rota2_date','int_vacc_mrv1','int_vacc_mrv1_date','int_vacc_mrv2','int_vacc_mrv2_date',
+    'int_vacc_yellow_fever', 'int_vacc_yellow_fever_date', 'int_vacc_vit_a','int_vacc_vit_a_date','int_vacc_deworm',
+    'int_vacc_deworm_date', 'int_date'
+]
+
+
+
 SAE_personnel_ids = ['ssheriff','agbla','ajalloh']
 
 physicians_worksheet = 'Reporting_updates'
+vacc_coh_worksheet = 'COH participants'
+vacc_worksheet = 'non-COH participants'
+
+SPR_BASELINE_FIELDS = [
+    'study_number','district','hf_bombali','hf_port_loko','hf_tonkolili','screening_age_months','sex','weight','height_available',
+    'height','muac_available','muac','ethnicity','other_ethnicity','antimalarials','antimalarials_48h','ctx',
+    'ctx_duration','art','bednet','temperature','fever_new','fever','fever_episodes','fever_episodes_2',
+    'last_sp_dose_available','last_sp_dose'
+]
