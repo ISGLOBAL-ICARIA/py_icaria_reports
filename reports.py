@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
-
+from functools import reduce
 import pandas as pd
 import numpy as np
 import redcap
@@ -255,7 +255,9 @@ def physician_reports():
 #    df = main_df[main_df['redcap_event_name']=='adverse_events_arm_1']
 
     final_df = main_df[main_df['sae_interviewer_id'].isin(params.SAE_personnel_ids)]
-    df_to_excel = (final_df[['HF_id','record_id','study_number','sae_report_type', 'sae_med_terms','sae_rel_doc_1','sae_onset',
+    print(final_df)
+    df_to_excel = (final_df[['HF_id','record_id','study_number','sae_report_type', 'sae_med_terms',
+                    'sae_icd_10','sae_rel_doc_1','sae_onset',
                     'sae_death','sae_hosp','sae_threat','sae_disability','sae_other','sae_other_criteria',
                     'sae_relationship','sae_severity','sae_expectedness','sae_con_med_rel','sae_outcome','sae_action',
                     'sae_other_action','sae_con_drug_1','sae_con_subs_1','sae_interviewer_id','sae_complete','sae_date']])
@@ -263,12 +265,90 @@ def physician_reports():
     df_to_excel = df_to_excel.sort_values('sae_date',ascending=False)
     print(df_to_excel)
 
-    file_to_drive(params.physicians_worksheet,df_to_excel,tokens.filename_physicians,tokens.folder_id_physicians,
-                  index_included=False)
+    file_to_drive(params.physicians_worksheet,df_to_excel,tokens.filename_physicians,tokens.
+    folder_id_physicians,index_included=False)
 
-def file_to_drive(worksheet,df,drive_file_name,folder_id,index_included=True):
+def sae_pending_medrecords():
+    main_df = pd.DataFrame()
+    for project_name in tokens.REDCAP_PROJECTS_ICARIA:
+        print(project_name)
+        project = redcap.Project(tokens.URL, tokens.REDCAP_PROJECTS_ICARIA[project_name])
+        df = project.export_records(format='df', fields=params.ALERT_LOGIC_FIELDS_SAE_medrecords,event_name=['adverse_events_arm_1'])
+        df_sn = project.export_records(format='df', fields=['study_number'],event_name=['epipenta1_v0_recru_arm_1'])
+        df_sn = df_sn.reset_index()
+        df_sn = df_sn[df_sn['redcap_event_name']=='epipenta1_v0_recru_arm_1']
+        df = df.reset_index()
+        df = df[df['redcap_event_name']=='adverse_events_arm_1']
+        df = pd.merge(df,df_sn,left_on='record_id',right_on='record_id')
+
+        df['HF_id'] = project_name.split('.')[0]
+        if main_df.empty:
+            main_df = df
+        else:
+            main_df = pd.concat([main_df,df])
+
+    final_df = main_df[(main_df['sae_rel_doc_1'].isnull())&
+            (main_df['sae_rel_doc_2'].isnull())&
+            (main_df['sae_rel_doc_3'].isnull())&
+            (main_df['sae_rel_doc_4'].isnull())&
+            (main_df['sae_rel_doc_5'].isnull())&
+            (main_df['sae_rel_doc_6'].isnull())&
+            (main_df['sae_rel_doc_7'].isnull())&
+            (main_df['sae_rel_doc_8'].isnull()) &
+            (main_df['sae_rel_doc_9'].isnull()) &
+            (main_df['sae_rel_doc_10'].isnull()) &
+            (main_df['sae_rel_doc_11'].isnull()) &
+            (main_df['sae_rel_doc_12'].isnull()) &
+            (main_df['sae_rel_doc_13'].isnull()) &
+            (main_df['sae_rel_doc_14'].isnull()) &
+            (main_df['sae_rel_doc_15'].isnull()) &
+            (main_df['sae_rel_doc_16'].isnull()) &
+            (main_df['sae_rel_doc_17'].isnull()) &
+            (main_df['sae_rel_doc_18'].isnull()) &
+            (main_df['sae_rel_doc_19'].isnull()) &
+            (main_df['sae_rel_doc_20'].isnull()) &
+            (main_df['sae_rel_doc_21'].isnull()) &
+            (main_df['sae_rel_doc_22'].isnull()) &
+            (main_df['sae_rel_doc_23'].isnull()) &
+            (main_df['sae_rel_doc_24'].isnull()) &
+            (main_df['sae_rel_doc_25'].isnull())
+            ][['HF_id','record_id','study_number','sae_hosp_admin_date', 'sae_outcome', 'sae_interviewer_id','sae_date','sae_time',
+    'sae_complete']]
+
+    final_df = final_df[final_df['sae_time']>='2023-06-01 00:00:00']
+    outcome = []
+    complete = []
+    for k,el in final_df.T.items():
+        try:
+            outcome.append(params.sae_outcome_dict[int(el.sae_outcome)])
+        except:
+            outcome.append('NaN')
+        try:
+            complete.append(params.sae_complete_dict[int(el.sae_complete)])
+        except:
+            complete.append('NaN')
+    final_df['sae_outcome'] = outcome
+    final_df['sae_complete']=complete
+
+
+    """ EXCLUSION OF VERBAL AUTOPSIES"""
+    va_who = pd.read_csv('/home/abofill/Documents/github/py_icaria_reports/va_who_v1_5_3_20230110.csv')
+    ica_va = list(va_who['consented-deceased_CRVS-info_on_deceased-ICA001'])
+
+    final_df = final_df[~final_df['study_number'].isin(ica_va)]
+
+    df_to_excel = final_df.sort_values(['HF_id','sae_time'],ascending=[True,False])
+
+    print(df_to_excel)
+    df_to_excel.to_excel('/home/abofill/Documents/github/py_icaria_reports/sae_without_medical_record.xlsx',index=False)
+
+
+def file_to_drive(worksheet,df,drive_file_name,folder_id,index_included=True,deleting=False):
     gc = gspread.oauth(tokens.path_credentials)
     sh = gc.open(title=drive_file_name,folder_id=folder_id)
+    if deleting:
+        actual_worksheet = sh.worksheet(worksheet)
+        actual_worksheet.clear()
     set_with_dataframe(sh.worksheet(worksheet), df,include_index=index_included)
 
 
@@ -291,6 +371,7 @@ def cohorts():
     print(cohort_records)
 
 
+
 def SPR_baseline_merge_with_lab_results(lab_results,save_):
     project = redcap.Project(tokens.URL, tokens.SPR_BASELINE)
     df = project.export_records(format='df', fields=params.SPR_BASELINE_FIELDS)
@@ -308,8 +389,19 @@ def SPR_baseline_merge_with_lab_results(lab_results,save_):
 
     all_together.to_excel(save_,index=False)
 
+
+
+
+
+
+def compare(x, y):
+    if x == y:
+        return False
+    return True
+
+
 class CLEANING:
-    def intervention_antigens(self):
+    def more_than_expected_vacc_doses(self):
         final_df = pd.DataFrame(columns=['HF','record_id','study_number','vacc_field','number_of_dates','epipenta1_v0_recru_arm_1',
                                          'epipenta2_v1_iptis_arm_1','epipenta3_v2_iptis_arm_1','epivita_v3_iptisp3_arm_1',
                                          'epimvr1_v4_iptisp4_arm_1','epivita_v5_iptisp5_arm_1','epimvr2_v6_iptisp6_arm_1'])
@@ -328,44 +420,125 @@ class CLEANING:
             df = project.export_records(format='df', fields=params.LOGIC_FIELDS_INT_ANTIGENS)
             dfcoh = df.reset_index()
             cohorts_list = dfcoh[dfcoh['redcap_event_name']=='cohort_after_mrv_2_arm_1']['record_id'].unique()
-            for n,data in df[(df.index.get_level_values('record_id').isin(cohorts_list))&(df['int_date'].notnull())].groupby(level=0):
-                for k,el in data.items():
-                    if ("date" in str(k) and str(k) != 'int_vacc_vit_a_date' and str(k) != 'int_date' and el.count()>1) or (str(k)== 'int_vacc_vit_a_date' and el.count()>2) :
-                        final_df_coh.loc[c_coh] = ''
-                        final_df_coh.loc[c_coh]['study_number'] = study_numbers.loc[n].values[0]
-                        final_df_coh.loc[c_coh]['HF'] = project_name
-                        final_df_coh.loc[c_coh]['record_id'] = n
-                        final_df_coh.loc[c_coh]['vacc_field'] = k
-                        final_df_coh.loc[c_coh]['number_of_dates'] = str(el.count())
-                        for event in el.index.get_level_values(1):
-                            final_df_coh.loc[c_coh][event] = el.reset_index().set_index('redcap_event_name').T[event].values[-1]
-                        c_coh+=1
-#                    elif str(k)== 'int_vacc_vit_a_date' and el.count()>2:
-#                        print(project_name,n,k,el.count(),el.values)
 
-            final_df_coh= final_df_coh.replace(np.nan, '0')
-            for n, data in df[(~df.index.get_level_values('record_id').isin(cohorts_list)) & (df['int_date'].notnull())].groupby(level=0):
-                for k, el in data.items():
-                    if "date" in str(k) and str(k) != 'int_vacc_vit_a_date' and str(k) != 'int_date' and el.count() > 1 or (str(k)== 'int_vacc_vit_a_date' and el.count()>2):
-                        final_df.loc[c] = ''
-                        final_df.loc[c]['study_number'] = study_numbers.loc[n].values[0]
-                        final_df.loc[c]['HF'] = project_name
-                        final_df.loc[c]['record_id'] = n
-                        final_df.loc[c]['vacc_field'] = k
-                        final_df.loc[c]['number_of_dates'] = str(el.count())
-                        for event in el.index.get_level_values(1):
-                            final_df.loc[c][event] = el.reset_index().set_index('redcap_event_name').T[event].values[-1]
-                        c += 1
-               #     elif str(k) == 'int_vacc_vit_a_date' and el.count() > 2:
-            final_df = final_df.replace(np.nan, '0')
+            final_df_coh,c_coh = CLEANING().build_new_df(df[(df.index.get_level_values('record_id').isin(cohorts_list))&(df['int_date'].notnull())].groupby(level=0),study_numbers,project_name,final_df_coh,c_coh)
+            final_df,c = CLEANING().build_new_df(df[(~df.index.get_level_values('record_id').isin(cohorts_list)) & (df['int_date'].notnull())].groupby(level=0),study_numbers,project_name,final_df,c)
+
         file_to_drive(params.vacc_coh_worksheet,final_df_coh,tokens.filename_vacc,tokens.folder_id_vacc,index_included=False)
         file_to_drive(params.vacc_worksheet,final_df,tokens.filename_vacc,tokens.folder_id_vacc,index_included=False)
+
+    def build_new_df(self,initial_df,study_numbers,project_name,final_df,count):
+        for n, data in initial_df:
+            for k, el in data.items():
+                if ("date" in str(k) and str(k) != 'int_vacc_vit_a_date' and str(k) != 'int_date' and el.count() > 1) or (str(k) == 'int_vacc_vit_a_date' and el.count() > 2):
+                    if reduce(compare, el.dropna().values):
+                        final_df.loc[count] = ''
+                        final_df.loc[count]['study_number'] = study_numbers.loc[n].values[0]
+                        final_df.loc[count]['HF'] = project_name
+                        final_df.loc[count]['record_id'] = n
+                        final_df.loc[count]['vacc_field'] = k
+                        final_df.loc[count]['number_of_dates'] = str(el.count())
+                        for event in el.index.get_level_values(1):
+                            final_df.loc[count][event] = el.reset_index().set_index('redcap_event_name').T[event].values[-1]
+                        count += 1
+        #     elif str(k) == 'int_vacc_vit_a_date' and el.count() > 2:
+        final_df = final_df.replace(np.nan, '0')
+        return final_df,count
+
+
+
+    def vacc_not_received(self,age=16,visit='18M'):
+        for HF in params.HF_DICT:
+            final_df = pd.DataFrame(columns=['HF', 'record_id', 'study_number', 'last_epi_visit', 'Vaccine', 'number_of_dosis'])
+            c = 0
+            print(HF)
+            for project_name in tokens.REDCAP_PROJECTS_ICARIA:
+                if HF in str(project_name):
+                    print(project_name)
+                    project = redcap.Project(tokens.URL, tokens.REDCAP_PROJECTS_ICARIA[project_name])
+
+                    study_numbers = project.export_records(format='df', fields=['study_number']).reset_index().set_index('record_id')
+                    study_numbers = study_numbers[study_numbers['redcap_event_name']=='epipenta1_v0_recru_arm_1'][['study_number']]
+
+                    df = project.export_records(format='df', fields=params.LOGIC_FIELDS_INT_ANTIGENS)
+                    dfres = df.reset_index().set_index('record_id')
+
+                    ## FIND THOSE RECORD_IDS WITH AGE MORE THAN 16
+                    age_dict = {}
+                    more_than_age = []
+                    for k,el in dfres[dfres['redcap_event_name']=='epipenta1_v0_recru_arm_1']['child_dob'].T.items():
+                        if str(el)!='nan':
+                            b = months_between(datetime.today(),datetime.strptime(el,'%Y-%m-%d'))
+                            if b >= age:
+                                more_than_age.append(k)
+                            age_dict[k] = b
+
+                    ## FIND THOSE COMPLETED, DEATH, MIGRATED, WITHDRAWAL OR UNREACHABLE RECORD_IDS
+                    completed = dfres[(dfres['redcap_event_name']=='hhat_18th_month_of_arm_1')&(dfres['household_follow_up_complete']==2)].index
+                    death = dfres[(dfres['redcap_event_name']=='end_of_fu_arm_1')&(dfres['death_complete']==2)].index
+                    migrated = dfres[(dfres['redcap_event_name'] == 'out_of_schedule_arm_1') & (dfres['migration_complete']==2)].index
+                    withdrawal = dfres[(dfres['redcap_event_name'] == 'end_of_fu_arm_1') & (dfres['withdrawal_complete']==2)].index
+                    unreachable = dfres[(dfres['redcap_event_name'] == 'hhat_18th_month_of_arm_1') & (dfres['reachable_status']==2)].index
+                    screening_failures = dfres[(dfres['redcap_event_name'] == 'epipenta1_v0_recru_arm_1') & ((dfres['eligible']==0)|(dfres['study_number'].isnull()))].index
+
+                    errors =dfres[(dfres['redcap_event_name'] == 'epipenta1_v0_recru_arm_1') & (dfres['screening_complete']!=2)].index
+                    print("POTENTIAL RECORD ERRORS:")
+                    print(errors.values)
+                    to_analyse_df = df[((df.index.get_level_values('record_id').isin(more_than_age)) |
+                                       (df.index.get_level_values('record_id').isin(completed)))&
+                                       (~df.index.get_level_values('record_id').isin(screening_failures))&
+                                       (~df.index.get_level_values('record_id').isin(death))&
+                                       (~df.index.get_level_values('record_id').isin(migrated))&
+                                       (~df.index.get_level_values('record_id').isin(withdrawal))&
+                                       (~df.index.get_level_values('record_id').isin(errors))&
+                                       (~df.index.get_level_values('record_id').isin(unreachable))
+
+                    ]
+
+                    ## CALCULATION OF THE LAST VISIT AND THE LIST OF VACCINES
+                    last_intervention_df = to_analyse_df[to_analyse_df.index.get_level_values('redcap_event_name').isin(params.epi_visits)]
+
+                    ### BCG vaccine in Vaccination History
+                    bcg_on_vacc_hist = dfres[dfres['his_vacc_bcg']==1].index
+
+
+                    for n, data in last_intervention_df.groupby(level=0):
+                        last_visit = data[['int_date']][data[['int_date']] == max(data[['int_date']].dropna().values)[0]].dropna().index.get_level_values('redcap_event_name')[0]
+                        list_vacc = params.epi_visits_dict[last_visit]
+                        for k, el in data.items():
+                            if "date" in str(k) and str(k) in list_vacc:
+                                if (str(k) == 'int_vacc_vit_a_date' and el.count() < 2) or (str(k) != 'int_vacc_vit_a_date' and el.count() < 1):
+                                    if k.split("_date")[0] == 'int_vacc_bcg' and n in bcg_on_vacc_hist:
+                                        pass
+                                    else:
+                                        final_df.loc[c] = ''
+                                        final_df.loc[c]['study_number'] = study_numbers.loc[n].values[0]
+                                        final_df.loc[c]['HF'] = HF
+                                        final_df.loc[c]['record_id'] = n
+                                        final_df.loc[c]['last_epi_visit'] = last_visit.split("_arm")[0]
+                                        final_df.loc[c]['Vaccine'] = k.split("_date")[0]
+                                        final_df.loc[c]['number_of_dosis'] = str(el.count())
+                                        c += 1
+
+            if not final_df.empty:
+                print(final_df)
+                file_to_drive(HF,final_df,tokens.filename_vacc_not_administered,tokens.folder_id_vacc,
+                              index_included=False, deleting=True)
+
+def months_between(d1, d2):
+    dd1 = min(d1, d2)
+    dd2 = max(d1, d2)
+    return (dd2.year - dd1.year)*12 + dd2.month - dd1.month
 
 """
 MIRAR SI ALGUN CHILD NO HA REBUT ALGUN ANTIGEN
 - BY AGE 16MoA
 - Or at 18M visit
 
+
 Antigens NO but date.
 Antigens YES but no date.
+
+
+
 """
