@@ -73,7 +73,8 @@ ALERT_LOGIC_FIELDS_SAE_physicians = [
     'record_id', 'sae_report_type', 'sae_med_terms', 'sae_rel_doc_1', 'sae_onset',
     'sae_death', 'sae_hosp', 'sae_threat', 'sae_disability', 'sae_other', 'sae_other_criteria',
     'sae_relationship', 'sae_severity', 'sae_expectedness', 'sae_con_med_rel', 'sae_outcome', 'sae_action',
-    'sae_other_action', 'sae_con_drug_1', 'sae_con_subs_1', 'sae_interviewer_id', 'sae_complete', 'sae_date'
+    'sae_other_action', 'sae_con_drug_1', 'sae_con_subs_1', 'sae_interviewer_id', 'sae_complete', 'sae_date',
+    'sae_icd_10'
 ]
 
 ALERT_LOGIC_FIELDS_COHORTS = [
@@ -97,25 +98,77 @@ ALERT_LOGIC_FIELDS_COHORTS = [
     'bs_antimalarial_unit_2','bs_antimalarial_freq_2','bs_antimalarial_route_2','bs_antimalarial_start_2','bs_antimalarial_ongoing_2',
     'bs_antimalarial_stop_2','blood_smear_other','blood_smear_other_diagnoses','ch_rdt_date'
 ]
+ALERT_LOGIC_FIELDS_SAE_medrecords = [
+    'record_id', 'sae_report_type',  'sae_hosp_admin_date', 'sae_outcome', 'sae_interviewer_id','sae_date','sae_time',
+    'sae_complete','sae_rel_doc_1','sae_rel_doc_2','sae_rel_doc_3','sae_rel_doc_4','sae_rel_doc_5','sae_rel_doc_6',
+    'sae_rel_doc_7','sae_rel_doc_8','sae_rel_doc_9','sae_rel_doc_10','sae_rel_doc_11','sae_rel_doc_12','sae_rel_doc_13',
+    'sae_rel_doc_14','sae_rel_doc_15','sae_rel_doc_16','sae_rel_doc_17','sae_rel_doc_18','sae_rel_doc_19',
+    'sae_rel_doc_20','sae_rel_doc_21','sae_rel_doc_22','sae_rel_doc_23','sae_rel_doc_24','sae_rel_doc_25'
+]
+
+sae_outcome_dict = {
+1:'Recovered/resolved',
+2:'Recovered/resolved with sequelae',
+3:'Not yet recovered/not resolved',
+4:'Ongoing',
+5:'Deterioration',
+6:'Permanent damage',
+7:'Death',
+8:'Unknown',
+}
+sae_complete_dict = {
+    0:'Incomplete',
+    1:'Unverified',
+    2:'Complete',
+}
 
 LOGIC_FIELDS_INT_ANTIGENS = [
-    'int_vacc_bcg', 'int_vacc_bcg_date', 'int_vacc_opv1', 'int_vacc_opv1_date','int_vacc_opv2', 'int_vacc_opv2_date',
+    'child_dob','int_vacc_bcg', 'int_vacc_bcg_date', 'int_vacc_opv1', 'int_vacc_opv1_date','int_vacc_opv2', 'int_vacc_opv2_date',
     'int_vacc_opv3', 'int_vacc_opv3_date', 'int_vacc_ipv', 'int_vacc_ipv_date','int_vacc_ipv2', 'int_vacc_ipv2_date',
     'int_vacc_penta1', 'int_vacc_penta1_date', 'int_vacc_penta2','int_vacc_penta2_date', 'int_vacc_penta3',
     'int_vacc_penta3_date', 'int_vacc_pneumo1', 'int_vacc_pneumo1_date','int_vacc_pneumo2', 'int_vacc_pneumo2_date',
     'int_vacc_pneumo3', 'int_vacc_pneumo3_date', 'int_vacc_rota1','int_vacc_rota1_date', 'int_vacc_rota2',
     'int_vacc_rota2_date','int_vacc_mrv1','int_vacc_mrv1_date','int_vacc_mrv2','int_vacc_mrv2_date',
     'int_vacc_yellow_fever', 'int_vacc_yellow_fever_date', 'int_vacc_vit_a','int_vacc_vit_a_date','int_vacc_deworm',
-    'int_vacc_deworm_date', 'int_date'
+    'int_vacc_deworm_date', 'int_date', 'household_follow_up_complete','death_complete','migration_complete',
+    'withdrawal_complete', 'reachable_status', 'eligible', 'screening_complete', 'study_number','his_vacc_bcg'
 ]
 
+epi_visits_dict = {
+    'epipenta1_v0_recru_arm_1': ['int_vacc_bcg_date','int_vacc_penta1_date','int_vacc_opv1_date','int_vacc_pneumo1_date','int_vacc_rota1_date'],
+    'epipenta2_v1_iptis_arm_1':  ['int_vacc_bcg_date','int_vacc_penta1_date','int_vacc_opv1_date','int_vacc_pneumo1_date','int_vacc_rota1_date',
+                                  'int_vacc_penta2_date','int_vacc_opv2_date','int_vacc_pneumo2_date','int_vacc_rota2_date'],
+    'epipenta3_v2_iptis_arm_1': ['int_vacc_bcg_date','int_vacc_penta1_date','int_vacc_opv1_date','int_vacc_pneumo1_date','int_vacc_rota1_date',
+                                 'int_vacc_penta2_date','int_vacc_opv2_date','int_vacc_pneumo2_date','int_vacc_rota2_date',
+                                 'int_vacc_penta3_date','int_vacc_opv3_date','int_vacc_pneumo3_date','int_vacc_ipv_date'],
+    'epivita_v3_iptisp3_arm_1': ['int_vacc_bcg_date','int_vacc_penta1_date','int_vacc_opv1_date','int_vacc_pneumo1_date','int_vacc_rota1_date',
+                                 'int_vacc_penta2_date','int_vacc_opv2_date','int_vacc_pneumo2_date','int_vacc_rota2_date',
+                                 'int_vacc_penta3_date','int_vacc_opv3_date','int_vacc_pneumo3_date','int_vacc_ipv_date','int_vacc_vit_a_date'],
+    'epimvr1_v4_iptisp4_arm_1': ['int_vacc_bcg_date','int_vacc_penta1_date','int_vacc_opv1_date','int_vacc_pneumo1_date','int_vacc_rota1_date',
+                                 'int_vacc_penta2_date','int_vacc_opv2_date','int_vacc_pneumo2_date','int_vacc_rota2_date',
+                                 'int_vacc_penta3_date','int_vacc_opv3_date','int_vacc_pneumo3_date','int_vacc_ipv_date','int_vacc_vit_a_date',
+                                 'int_vacc_ipv2_date','int_vacc_yellow_fever_date','int_vacc_mrv1_date'],
+    'epivita_v5_iptisp5_arm_1': ['int_vacc_bcg_date','int_vacc_penta1_date','int_vacc_opv1_date','int_vacc_pneumo1_date','int_vacc_rota1_date',
+                                 'int_vacc_penta2_date','int_vacc_opv2_date','int_vacc_pneumo2_date','int_vacc_rota2_date',
+                                 'int_vacc_penta3_date','int_vacc_opv3_date','int_vacc_pneumo3_date','int_vacc_ipv_date','int_vacc_vit_a_date',
+                                 'int_vacc_ipv2_date','int_vacc_yellow_fever_date','int_vacc_mrv1_date','int_vacc_deworm_date'],
+    'epimvr2_v6_iptisp6_arm_1': ['int_vacc_bcg_date','int_vacc_penta1_date','int_vacc_opv1_date','int_vacc_pneumo1_date','int_vacc_rota1_date',
+                                 'int_vacc_penta2_date','int_vacc_opv2_date','int_vacc_pneumo2_date','int_vacc_rota2_date',
+                                 'int_vacc_penta3_date','int_vacc_opv3_date','int_vacc_pneumo3_date','int_vacc_ipv_date','int_vacc_vit_a_date',
+                                 'int_vacc_ipv2_date','int_vacc_yellow_fever_date','int_vacc_mrv1_date','int_vacc_deworm_date',
+                                 'int_vacc_mrv2_date'],
+}
 
-
+epi_visits = ['epipenta1_v0_recru_arm_1', 'epipenta2_v1_iptis_arm_1', 'epipenta3_v2_iptis_arm_1',
+             'epivita_v3_iptisp3_arm_1',
+             'epimvr1_v4_iptisp4_arm_1', 'epivita_v5_iptisp5_arm_1', 'epimvr2_v6_iptisp6_arm_1']
 SAE_personnel_ids = ['ssheriff','agbla','ajalloh']
 
 physicians_worksheet = 'Reporting_updates'
 vacc_coh_worksheet = 'COH participants'
 vacc_worksheet = 'non-COH participants'
+
+
 
 SPR_BASELINE_FIELDS = [
     'study_number','district','hf_bombali','hf_port_loko','hf_tonkolili','screening_age_months','sex','weight','height_available',
